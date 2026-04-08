@@ -1,10 +1,10 @@
 bl_info = {
     "name": "RR Material Replacement",
     "author": "Nosynose326",
-    "version": (1, 7),
+    "version": (1, 8),
     "blender": (3, 0, 0),
     "location": "View3D > Sidebar > RR Material Replacement",
-    "description": "Replaces materials based on a user-defined file path.",
+    "description": "Replaces materials based on RRMaterialPreview.blend.",
     "category": "Material",
 }
 
@@ -52,15 +52,16 @@ class MATERIAL_OT_RRReplace(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
     
     def execute(self, context):
-        # Get the path from the UI text box
         raw_path = context.scene.rr_material_path
         filepath = bpy.path.abspath(raw_path)
         
         if not filepath or not os.path.exists(filepath):
             self.report({'ERROR'}, f"Invalid Path: '{filepath}' does not exist.")
             return {'CANCELLED'}
+            
+        if "RRMaterialPreview.blend" not in filepath:
+            self.report({'WARNING'}, "File name should be RRMaterialPreview.blend")
 
-        # Append Node Groups
         try:
             with bpy.data.libraries.load(filepath, link=False) as (data_from, data_to):
                 data_to.node_groups = data_from.node_groups
@@ -116,7 +117,7 @@ class MATERIAL_PT_RRPanel(bpy.types.Panel):
         layout = self.layout
         scene = context.scene
         
-        layout.label(text="RRObjects.blend File Path:")
+        layout.label(text="RRMaterialPreview.blend File Path:")
         layout.prop(scene, "rr_material_path", text="")
         
         layout.separator()
@@ -125,12 +126,11 @@ class MATERIAL_PT_RRPanel(bpy.types.Panel):
 # --- REGISTRATION ---
 
 def register():
-    # Adding a string property to the scene to store the path
     bpy.types.Scene.rr_material_path = bpy.props.StringProperty(
         name="File Path",
-        description="Path to the RRObjects.blend file",
+        description="Path to the RRMaterialPreview.blend file",
         default="",
-        subtype='FILE_PATH' # This adds a folder icon to the text box
+        subtype='FILE_PATH'
     )
     bpy.utils.register_class(MATERIAL_OT_RRReplace)
     bpy.utils.register_class(MATERIAL_PT_RRPanel)
