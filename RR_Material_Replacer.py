@@ -10,6 +10,7 @@ bl_info = {
 
 import bpy
 import os
+import re
 
 # --- COLOR DATA & CONVERSION ---
 
@@ -44,7 +45,20 @@ COLOR_LIST = {
     "smoke": "#524D4FFF", "charcoal": "#2D353BFF", "black": "#08202DFF"
 }
 
-# --- OPERATOR ---
+def extract_hex_from_name(name):
+    """Search for a 6 or 8 character hex code anywhere in a material name.
+    Accepts formats like #RRGGBB, #RRGGBBAA, RRGGBB, or RRGGBBAA."""
+    # Try with leading # first, then bare hex
+    match = re.search(r'#?([0-9A-Fa-f]{8}|[0-9A-Fa-f]{6})(?:[^0-9A-Fa-f]|$)', name)
+    if match:
+        hex_str = match.group(1)
+        if len(hex_str) == 6:
+            hex_str += "FF"  # Add full alpha if not present
+        return hex_str
+    return None
+
+
+
 
 class MATERIAL_OT_RRReplace(bpy.types.Operator):
     bl_idname = "material.rr_replace"
@@ -99,6 +113,13 @@ class MATERIAL_OT_RRReplace(bpy.types.Operator):
                     for inp in group_node.inputs:
                         if "color" in inp.name.lower():
                             inp.default_value = rgba
+                else:
+                    hex_code = extract_hex_from_name(mat.name)
+                    if hex_code:
+                        rgba = hex_to_linear_rgba(hex_code)
+                        for inp in group_node.inputs:
+                            if "color" in inp.name.lower():
+                                inp.default_value = rgba
                 converted_count += 1
 
         self.report({'INFO'}, f"Processed {converted_count} materials using: {filepath}")
